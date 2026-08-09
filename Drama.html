@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mini Drama App</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js CDN (untuk state management sederhana) -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        /* Sembunyikan scrollbar untuk pengalaman mirip aplikasi mobile */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-black text-white font-sans antialiased select-none" 
+      x-data="dramaApp()" 
+      x-init="initApp()">
+
+    <!-- Header Transparan (Saldo Koin & Judul) -->
+    <header class="fixed top-0 left-0 right-0 z-30 p-4 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent">
+        <div>
+            <h1 class="font-bold text-lg leading-tight" x-text="currentDrama.title"></h1>
+            <p class="text-xs text-gray-300">Episode <span x-text="activeEpisodeIndex + 1"></span> dari <span x-text="episodes.length"></span></p>
+        </div>
+        <div class="flex items-center gap-2 bg-neutral-900/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-neutral-700">
+            <span class="text-yellow-400 text-sm font-bold">🪙 <span x-text="userCoins"></span></span>
+            <button @click="showPaywall = true" class="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-2 py-0.5 rounded-full">+</button>
+        </div>
+    </header>
+
+    <!-- Vertical Video Scroll Feed -->
+    <main class="h-screen w-full overflow-y-scroll snap-y snap-mandatory no-scrollbar" @scroll.debounce.100ms="handleScroll($event)">
+        <template x-for="(ep, index) in episodes" :key="ep.id">
+            <section class="h-screen w-full snap-start relative flex items-center justify-center bg-neutral-950">
+                
+                <!-- Video Player (Hanya jalan jika episode gratis atau sudah dibeli) -->
+                <template x-if="ep.isUnlocked">
+                    <video 
+                        :id="'video-' + index"
+                        class="w-full h-full object-cover" 
+                        loop 
+                        playsinline 
+                        preload="metadata"
+                        @click="togglePlay(index)">
+                        <source :src="ep.videoUrl" type="video/mp4">
+                    </video>
+                </template>
+
+                <!-- Overlay Episode Terkunci -->
+                <template x-if="!ep.isUnlocked">
+                    <div class="absolute inset-0 bg-neutral-900/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-10">
+                        <div class="w-16 h-16 bg-neutral-800 rounded-full flex items-center justify-center mb-4 border border-neutral-700">
+                            <span class="text-3xl">🔒</span>
+                        </div>
+                        <h2 class="text-xl font-bold mb-2">Episode Terkunci</h2>
+                        <p class="text-gray-400 text-sm mb-6">Gunakan <span class="text-yellow-400 font-bold" x-text="ep.price"></span> koin untuk membuka episode <span x-text="ep.number"></span>.</p>
+                        <button @click="unlockEpisode(index)" class="w-full max-w-xs bg-red-600 hover:bg-red-700 font-bold py-3 rounded-full transition shadow-lg shadow-red-600/30">
+                            Buka Sekarang
+                        </button>
+                    </div>
+                </template>
+
+                <!-- Overlay Tombol Samping (Suka, Komentar, Bagikan) -->
+                <div class="absolute right-4 bottom-24 flex flex-col items-center gap-5 z-20">
+                    <button class="flex flex-col items-center text-xs gap-1">
+                        <div class="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-lg">❤️</div>
+                        <span>12.4K</span>
+                    </button>
+                    <button class="flex flex-col items-center text-xs gap-1">
+                        <div class="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-lg">💬</div>
+                        <span>452</span>
+                    </button>
+                    <button class="flex flex-col items-center text-xs gap-1">
+                        <div class="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-lg">🔗</div>
+                        <span>Bagi</span>
+                    </button>
+                </div>
+
+            </section>
+        </template>
+    </main>
+
+    <!-- Modal Top-Up Koin (Paywall) -->
+    <div x-show="showPaywall" x-transition.opacity class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-neutral-900 w-full max-w-md rounded-t-2xl sm:rounded-2xl p-6 border-t sm:border border-neutral-800">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">Top Up Koin</h3>
+                <button @click="showPaywall = false" class="text-gray-400 text-xl font-bold">&times;</button>
+            </div>
+            <p class="text-gray-400 text-xs mb-4">Pilih paket koin untuk melanjutkan menonton episode premium.</p>
+            
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <button @click="buyCoins(100, 10000)" class="p-3 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl flex flex-col items-center">
+                    <span class="text-yellow-400 text-lg font-bold">🪙 100</span>
+                    <span class="text-xs text-gray-300 mt-1">Rp 10.000</span>
+                </button>
+                <button @click="buyCoins(300, 25000)" class="p-3 bg-neutral-800 hover:bg-neutral-700 border border-red-500 rounded-xl flex flex-col items-center relative">
+                    <span class="absolute -top-2 bg-red-600 text-[10px] font-bold px-2 py-0.5 rounded-full">POPULER</span>
+                    <span class="text-yellow-400 text-lg font-bold">🪙 300</span>
+                    <span class="text-xs text-gray-300 mt-1">Rp 25.000</span>
+                </button>
+            </div>
+
+            <button @click="showPaywall = false" class="w-full bg-neutral-800 text-gray-300 py-2.5 rounded-xl text-sm font-semibold">Tutup</button>
+        </div>
+    </div>
+
+    <!-- Script Logika Aplikasi -->
+    <script>
+        function dramaApp() {
+            return {
+                userCoins: 50,
+                activeEpisodeIndex: 0,
+                showPaywall: false,
+                currentDrama: {
+                    title: "Cinta Di Balik Layar"
+                },
+                // Data Episode Mockup
+                episodes: [
+                    { id: 1, number: 1, videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-vertical-view-of-a-neon-lit-city-street-41563-large.mp4", isUnlocked: true, price: 0 },
+                    { id: 2, number: 2, videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-vertical-shot-of-a-woman-walking-in-a-forest-41562-large.mp4", isUnlocked: true, price: 0 },
+                    { id: 3, number: 3, videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-tree-branches-in-the-breeze-30008-large.mp4", isUnlocked: false, price: 20 },
+                    { id: 4, number: 4, videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-view-of-a-neon-lit-city-street-41563-large.mp4", isUnlocked: false, price: 20 }
+                ],
+                initApp() {
+                    this.$nextTick(() => {
+                        this.playVideo(0);
+                    });
+                },
+                handleScroll(e) {
+                    const index = Math.round(e.target.scrollTop / window.innerHeight);
+                    if (index !== this.activeEpisodeIndex) {
+                        this.pauseVideo(this.activeEpisodeIndex);
+                        this.activeEpisodeIndex = index;
+                        this.playVideo(index);
+                    }
+                },
+                playVideo(index) {
+                    const video = document.getElementById(`video-${index}`);
+                    if (video && this.episodes[index].isUnlocked) {
+                        video.play().catch(() => {});
+                    }
+                },
+                pauseVideo(index) {
+                    const video = document.getElementById(`video-${index}`);
+                    if (video) {
+                        video.pause();
+                    }
+                },
+                togglePlay(index) {
+                    const video = document.getElementById(`video-${index}`);
+                    if (video) {
+                        if (video.paused) {
+                            video.play();
+                        } else {
+                            video.pause();
+                        }
+                    }
+                },
+                unlockEpisode(index) {
+                    const ep = this.episodes[index];
+                    if (this.userCoins >= ep.price) {
+                        this.userCoins -= ep.price;
+                        ep.isUnlocked = true;
+                        this.$nextTick(() => {
+                            this.playVideo(index);
+                        });
+                    } else {
+                        this.showPaywall = true;
+                    }
+                },
+                buyCoins(amount, price) {
+                    this.userCoins += amount;
+                    this.showPaywall = false;
+                    alert(`Berhasil membeli ${amount} koin!`);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
