@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resep Nusantara - Jelajah Kuliner Indonesia</title>
+    <title>Resep Kuliner Nusantara</title>
+    <!-- SDK Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -14,33 +16,42 @@
         body {
             background-color: #f8f9fa;
             color: #333;
-            padding: 20px;
+            padding: 16px;
         }
         .container {
-            max-width: 1000px;
+            max-width: 600px;
             margin: 0 auto;
         }
         header {
             text-align: center;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
         h1 {
             color: #d9534f;
-            margin-bottom: 8px;
+            font-size: 24px;
+            margin-bottom: 6px;
+        }
+        p.subtitle {
+            color: #666;
+            font-size: 14px;
         }
         
-        /* Form Pencarian */
+        /* Bar Pencarian */
         .search-box {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             margin-bottom: 20px;
         }
         input[type="text"] {
             flex: 1;
             padding: 12px;
-            border: 2px solid #ddd;
+            border: 1px solid #ccc;
             border-radius: 8px;
-            font-size: 16px;
+            font-size: 15px;
+            outline: none;
+        }
+        input[type="text"]:focus {
+            border-color: #d9534f;
         }
         button {
             padding: 12px 20px;
@@ -49,81 +60,77 @@
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
         }
         button:hover {
             background-color: #c9302c;
         }
 
-        /* Section Riwayat Pencarian */
+        /* Riwayat Pencarian */
         .history-container {
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
         .history-title {
-            font-size: 14px;
+            font-size: 13px;
             color: #666;
             margin-bottom: 8px;
         }
         .history-tags {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 6px;
         }
         .tag {
             background: #e9ecef;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 14px;
+            padding: 6px 14px;
+            border-radius: 16px;
+            font-size: 13px;
             cursor: pointer;
+            color: #495057;
             transition: background 0.2s;
         }
         .tag:hover {
-            background: #d6d8db;
+            background: #dee2e6;
         }
 
-        /* Layout Kartu Resep */
+        /* Daftar Kartu Resep */
         .recipe-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
+            grid-template-columns: 1fr;
+            gap: 16px;
         }
         .card {
             background: white;
             border-radius: 10px;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
-        }
-        .card:hover {
-            transform: translateY(-5px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
         .card img {
             width: 100%;
             height: 180px;
             object-fit: cover;
+            background-color: #eee;
         }
         .card-body {
-            padding: 15px;
+            padding: 14px;
         }
         .card-title {
-            font-size: 18px;
-            margin-bottom: 8px;
+            font-size: 16px;
+            margin-bottom: 6px;
             color: #2c3e50;
         }
         .card-desc {
-            font-size: 14px;
+            font-size: 13px;
             color: #666;
-            margin-bottom: 12px;
-            line-height: 1.4;
         }
 
-        /* Detail Modal / View */
         .loading, .empty-msg {
             text-align: center;
-            grid-column: 1 / -1;
-            padding: 40px;
+            padding: 30px 10px;
             color: #777;
+            font-size: 14px;
+            line-height: 1.5;
         }
     </style>
 </head>
@@ -132,43 +139,43 @@
 <div class="container">
     <header>
         <h1>🍲 Resep Kuliner Nusantara</h1>
-        <p>Cari resep masakan khas Indonesia pilihanmu</p>
+        <p class="subtitle">Cari resep masakan khas Indonesia pilihanmu</p>
     </header>
 
-    <!-- Bar Pencarian -->
     <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Cari resep (contoh: Rendang, Soto, Ayam)..." onkeypress="handleKeyPress(event)">
+        <input type="text" id="searchInput" placeholder="Soto ayam, Rendang, Ayam..." onkeypress="handleKeyPress(event)">
         <button onclick="searchRecipe()">Cari</button>
     </div>
 
-    <!-- Riwayat Pencarian -->
     <div class="history-container">
         <div class="history-title">Riwayat Pencarian Anda:</div>
         <div class="history-tags" id="historyTags">
-            <!-- Riwayat akan dimasukkan via JavaScript -->
+            <span style="font-size: 12px; color: #aaa;">Memuat riwayat...</span>
         </div>
     </div>
 
-    <!-- Daftar Resep -->
     <div class="recipe-grid" id="recipeGrid">
-        <div class="empty-msg">Ketik nama masakan di atas untuk menampilkan resep.</div>
+        <div class="empty-msg">Ketik nama masakan di atas untuk mencari resep.</div>
     </div>
 </div>
 
 <script>
-    // API Public Resep Indonesia (Unofficial)
-    const API_BASE_URL = 'https://masak-apa-tommorow.vercel.app/api/search/?q=';
+    // 1. ISIKAN DENGAN KUNCI SUPABASE ANDA
+    const SUPABASE_URL = 'YOUR_SUPABASE_URL_HERE';
+    const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE';
 
-    // Inisialisasi saat aplikasi pertama dimuat
+    // Inisialisasi Supabase
+    let supabase = null;
+    if (SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE') {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
-        renderHistory();
+        loadHistory();
     });
 
-    // Jalankan pencarian jika menekan Enter
     function handleKeyPress(e) {
-        if (e.key === 'Enter') {
-            searchRecipe();
-        }
+        if (e.key === 'Enter') searchRecipe();
     }
 
     // Fungsi Utama Mencari Resep
@@ -178,29 +185,35 @@
 
         if (!query) return;
 
+        // Simpan ke riwayat jika pencarian baru
         if (!queryOverride) {
-            saveToHistory(query);
-            renderHistory();
+            saveHistory(query);
         }
 
         const grid = document.getElementById('recipeGrid');
-        grid.innerHTML = '<div class="loading">Sabar ya, sedang mengambil data resep...</div>';
+        grid.innerHTML = '<div class="loading">Mencari resep masakan...</div>';
+
+        // Menggunakan AllOrigins Proxy untuk menghindari blokir CORS
+        const targetUrl = 'https://masak-apa-tommorow.vercel.app/api/search/?q=' + encodeURIComponent(query);
+        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl);
 
         try {
-            const response = await fetch(`${API_BASE_URL}${encodeURIComponent(query)}`);
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error('Network response was not ok');
+            
             const result = await response.json();
 
-            if (result.status && result.results.length > 0) {
+            if (result.status && result.results && result.results.length > 0) {
                 renderRecipes(result.results);
             } else {
                 grid.innerHTML = '<div class="empty-msg">Resep tidak ditemukan. Coba kata kunci masakan lain.</div>';
             }
         } catch (error) {
-            grid.innerHTML = '<div class="empty-msg" style="color:red;">Gagal mengambil data. Periksa koneksi internet Anda.</div>';
+            console.error('Fetch Error:', error);
+            grid.innerHTML = '<div class="empty-msg" style="color:#d9534f;">Gagal mengambil data resep.<br>Silakan periksa jaringan atau coba beberapa saat lagi.</div>';
         }
     }
 
-    // Menampilkan Resep ke Tampilan Kartu
     function renderRecipes(recipes) {
         const grid = document.getElementById('recipeGrid');
         grid.innerHTML = '';
@@ -209,51 +222,80 @@
             const card = document.createElement('div');
             card.className = 'card';
             card.innerHTML = `
-                <img src="${item.thumb || 'https://via.placeholder.com/300x180?text=No+Image'}" alt="${item.title}">
+                <img src="${item.thumb || 'https://via.placeholder.com/300x180?text=No+Image'}" alt="${item.title}" onerror="this.src='https://via.placeholder.com/300x180?text=Gambar+Tidak+Tersedia'">
                 <div class="card-body">
                     <h3 class="card-title">${item.title}</h3>
                     <p class="card-desc">Waktu: ${item.times || '-'} | Porsi: ${item.portion || '-'}</p>
-                    <p style="font-size: 12px; color: #888;">Tingkat: ${item.dificulty || '-'}</p>
                 </div>
             `;
             grid.appendChild(card);
         });
     }
 
-    // Menyimpan Kata Kunci ke LocalStorage
-    function saveToHistory(query) {
-        let history = JSON.parse(localStorage.getItem('recipeHistory')) || [];
-        
-        // Hapus duplikat jika kata kunci sudah ada
-        history = history.filter(item => item.toLowerCase() !== query.toLowerCase());
-        
-        // Tambah ke urutan paling awal
-        history.unshift(query);
-        
-        // Batasi maksimal 8 riwayat terakhir
-        if (history.length > 8) history.pop();
+    // --- MANAJEMEN RIWAYAT (SUPABASE + LOCALSTORAGE FALLBACK) ---
 
-        localStorage.setItem('recipeHistory', JSON.stringify(history));
+    async function saveHistory(query) {
+        // Fallback ke LocalStorage jika Supabase belum disetup
+        let localHist = JSON.parse(localStorage.getItem('recipeHistory')) || [];
+        localHist = localHist.filter(k => k.toLowerCase() !== query.toLowerCase());
+        localHist.unshift(query);
+        if (localHist.length > 6) localHist.pop();
+        localStorage.setItem('recipeHistory', JSON.stringify(localHist));
+
+        // Simpan ke Supabase jika terhubung
+        if (supabase) {
+            try {
+                await supabase.from('search_history').insert([{ keyword: query }]);
+            } catch (err) {
+                console.error('Gagal simpan ke Supabase:', err);
+            }
+        }
+
+        loadHistory();
     }
 
-    // Menampilkan Tag Riwayat
-    function renderHistory() {
+    async function loadHistory() {
         const historyContainer = document.getElementById('historyTags');
-        const history = JSON.parse(localStorage.getItem('recipeHistory')) || [];
 
-        if (history.length === 0) {
-            historyContainer.innerHTML = '<span style="font-size: 13px; color: #aaa;">Belum ada riwayat.</span>';
+        // Mengambil dari Supabase jika ada, jika tidak pakai LocalStorage
+        if (supabase) {
+            try {
+                const { data, error } = await supabase
+                    .from('search_history')
+                    .select('keyword')
+                    .order('created_at', { ascending: false })
+                    .limit(6);
+
+                if (!error && data && data.length > 0) {
+                    const uniqueKeywords = [...new Set(data.map(i => i.keyword))];
+                    renderTags(uniqueKeywords);
+                    return;
+                }
+            } catch (err) {
+                console.log('Menggunakan riwayat lokal');
+            }
+        }
+
+        const localHist = JSON.parse(localStorage.getItem('recipeHistory')) || [];
+        renderTags(localHist);
+    }
+
+    function renderTags(keywords) {
+        const historyContainer = document.getElementById('historyTags');
+        historyContainer.innerHTML = '';
+
+        if (keywords.length === 0) {
+            historyContainer.innerHTML = '<span style="font-size: 12px; color: #aaa;">Belum ada riwayat pencarian.</span>';
             return;
         }
 
-        historyContainer.innerHTML = '';
-        history.forEach(item => {
+        keywords.forEach(keyword => {
             const tag = document.createElement('span');
             tag.className = 'tag';
-            tag.textContent = item;
+            tag.textContent = keyword;
             tag.onclick = () => {
-                document.getElementById('searchInput').value = item;
-                searchRecipe(item);
+                document.getElementById('searchInput').value = keyword;
+                searchRecipe(keyword);
             };
             historyContainer.appendChild(tag);
         });
