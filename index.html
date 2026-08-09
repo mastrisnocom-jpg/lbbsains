@@ -14,6 +14,11 @@
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+  <!-- Library Ekspor PDF & Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
   <script>
     tailwind.config = {
       theme: {
@@ -190,7 +195,7 @@
       }
     }
 
-    // 3. AUTHENTICATION (LOGIN & REGISTRASI)
+    // 3. AUTHENTICATION
     function renderLoginView() {
       document.getElementById('appHeader').classList.add('hidden');
       document.getElementById('bottomNav').classList.add('hidden');
@@ -209,7 +214,6 @@
             <p id="authSubtitle" class="text-xs font-semibold text-slate-400">Management System Login</p>
           </div>
 
-          <!-- FORM LOGIN -->
           <form id="formLogin" onsubmit="handleLogin(event)" class="space-y-3 text-xs">
             <div>
               <label class="font-bold text-slate-700">Email / Username</label>
@@ -219,12 +223,6 @@
               <label class="font-bold text-slate-700">Password</label>
               <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full border border-slate-200 p-3 rounded-xl mt-1 focus:ring-2 focus:ring-brand-500 outline-none">
             </div>
-            <div class="flex justify-between items-center text-[11px]">
-              <label class="flex items-center gap-1.5 text-slate-600 cursor-pointer">
-                <input type="checkbox" class="rounded border-slate-300"> Remember Me
-              </label>
-              <a href="#" onclick="alert('Silakan hubungi Superadmin untuk reset password.')" class="text-brand-600 font-bold">Lupa Password?</a>
-            </div>
             <button type="submit" id="btnLoginSubmit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 rounded-xl shadow-md transition text-xs mt-2">
               Login ke Sistem
             </button>
@@ -233,7 +231,6 @@
             </div>
           </form>
 
-          <!-- FORM REGISTRASI -->
           <form id="formRegister" onsubmit="handleRegister(event)" class="space-y-3 text-xs hidden">
             <div>
               <label class="font-bold text-slate-700">Nama Lengkap</label>
@@ -321,10 +318,7 @@
       btn.innerText = 'Memproses Pendaftaran...';
       btn.disabled = true;
 
-      const { data, error } = await sb.auth.signUp({
-        email: email,
-        password: password
-      });
+      const { data, error } = await sb.auth.signUp({ email, password });
 
       if (error) {
         alert('Registrasi Gagal: ' + error.message);
@@ -404,7 +398,7 @@
       }, 500);
     }
 
-    // 5. MODUL DASHBOARD UTAMA
+    // 5. DASHBOARD
     async function renderDashboard(container) {
       container.innerHTML = `
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
@@ -431,7 +425,6 @@
 
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
           <div class="grid grid-cols-4 gap-y-4 gap-x-2 text-center">
-            
             <div onclick="navigateView('kelola_user')" class="flex flex-col items-center cursor-pointer group">
               <div class="w-11 h-11 rounded-full bg-red-500 text-white flex items-center justify-center text-lg shadow-md group-hover:scale-105 transition">
                 <i class="fa-solid fa-users-gear"></i>
@@ -487,7 +480,6 @@
               </div>
               <span class="text-[10px] font-bold text-slate-700 mt-1.5">Semua Menu</span>
             </div>
-
           </div>
         </div>
 
@@ -552,7 +544,7 @@
       }, 100);
     }
 
-    // 7. KELOLA USER (REAL SUPABASE)
+    // 7. KELOLA USER
     async function renderKelolaUser(container) {
       container.innerHTML = `
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
@@ -774,7 +766,7 @@
       else { closeModal(); renderKelolaKelas(document.getElementById('mainContent')); }
     }
 
-    // 10. MODUL KEUANGAN & PEMBAYARAN (FORM INTERAKTIF)
+    // 10. MODUL KEUANGAN
     async function renderKeuangan(container) {
       container.innerHTML = `
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-4">
@@ -783,7 +775,6 @@
             <button onclick="openModalTambahPembayaran()" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition">+ Catat Pembayaran</button>
           </div>
 
-          <!-- Ringkasan Singkat -->
           <div class="grid grid-cols-2 gap-2 text-xs">
             <div class="bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl">
               <p class="text-[10px] text-emerald-600 font-bold">Total Pembayaran</p>
@@ -795,7 +786,6 @@
             </div>
           </div>
 
-          <!-- Tabel Transaksi -->
           <div id="paymentListContainer" class="space-y-2 text-xs"><p class="text-slate-400 italic">Memuat riwayat transaksi...</p></div>
         </div>
       `;
@@ -861,7 +851,7 @@
       else { closeModal(); renderKeuangan(document.getElementById('mainContent')); }
     }
 
-    // 11. MODUL BROADCAST PENGUMUMAN
+    // 11. MODUL BROADCAST
     async function renderBroadcast(container) {
       container.innerHTML = `
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-4">
@@ -927,7 +917,7 @@
       else { closeModal(); renderBroadcast(document.getElementById('mainContent')); }
     }
 
-    // 12. MODUL SETTING WEB
+    // 12. SETTING WEB
     async function renderSettingWeb(container) {
       const { data: set } = await sb.from('settings').select('*').eq('id', 1).single();
 
@@ -970,50 +960,183 @@
       else alert('Pengaturan web berhasil diperbarui!');
     }
 
-    // 13. MODUL PUSAT LAPORAN FULL
+    // 13. LAPORAN FULL
     async function renderLaporan(container) {
       container.innerHTML = `
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-4">
           <h2 class="text-base font-bold text-slate-800">Pusat Laporan Full</h2>
           
           <div class="grid grid-cols-2 gap-2 text-xs">
-            <button onclick="cetakLaporan('Siswa')" class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-left hover:bg-brand-50 transition">
-              <i class="fa-solid fa-user-graduate text-brand-600 text-base mb-1"></i>
-              <p class="font-bold text-slate-800">Laporan Siswa</p>
-              <p class="text-[10px] text-slate-500">Ekspor data siswa aktif</p>
+            <button onclick="exportAbsenPDF()" class="p-3 bg-red-50 border border-red-200 rounded-xl text-left hover:bg-red-100 transition">
+              <i class="fa-solid fa-file-pdf text-red-600 text-base mb-1"></i>
+              <p class="font-bold text-slate-800">Laporan Presensi (PDF)</p>
+              <p class="text-[10px] text-slate-500">Unduh PDF Absensi</p>
             </button>
-            <button onclick="cetakLaporan('Keuangan')" class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-left hover:bg-brand-50 transition">
-              <i class="fa-solid fa-wallet text-amber-500 text-base mb-1"></i>
-              <p class="font-bold text-slate-800">Laporan Keuangan</p>
-              <p class="text-[10px] text-slate-500">Rekap transaksi & SPP</p>
+            <button onclick="exportAbsenExcel()" class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-left hover:bg-emerald-100 transition">
+              <i class="fa-solid fa-file-excel text-emerald-600 text-base mb-1"></i>
+              <p class="font-bold text-slate-800">Laporan Presensi (Excel)</p>
+              <p class="text-[10px] text-slate-500">Unduh Excel Absensi</p>
             </button>
           </div>
         </div>
       `;
     }
 
-    function cetakLaporan(jenis) {
-      alert(`Mencetak Laporan ${jenis}... Fitur ekspor siap digabungkan dengan PDF/Print.`);
+    // 14. PRESENSI & RIWAYAT PRESENSI REAL-TIME WITH PDF/EXCEL EXPORT
+    async function renderPresensi(container) {
+      const namaUser = currentUser ? (currentUser.nama_lengkap || currentUser.email) : 'MASTRISNO';
+
+      container.innerHTML = `
+        <!-- Form Presensi Utama -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
+          <h2 class="text-base font-bold text-slate-800">Presensi Kehadiran Hari Ini</h2>
+          <div class="flex gap-2 text-xs">
+            <button onclick="catatPresensi('Hadir')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow transition">
+              <i class="fa-solid fa-check"></i> Hadir
+            </button>
+            <button onclick="catatPresensi('Izin')" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow transition">
+              <i class="fa-solid fa-envelope"></i> Izin
+            </button>
+          </div>
+        </div>
+
+        <!-- Section Riwayat Absen & Ekspor -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
+          <div class="flex justify-between items-center">
+            <h3 class="text-xs font-bold text-slate-800">Riwayat Presensi</h3>
+            <div class="flex gap-1.5">
+              <button onclick="exportAbsenPDF()" class="bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow transition">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button onclick="exportAbsenExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow transition">
+                <i class="fa-solid fa-file-excel"></i> Excel
+              </button>
+            </div>
+          </div>
+
+          <div id="presensiListContainer" class="space-y-2 text-xs">
+            <p class="text-slate-400 italic text-center py-2">Memuat riwayat presensi...</p>
+          </div>
+        </div>
+      `;
+
+      await fetchRiwayatPresensi();
     }
 
-    // 14. MODUL DATABASE & PRESENSI & JADWAL & NILAI
+    async function catatPresensi(status) {
+      const namaUser = currentUser ? (currentUser.nama_lengkap || currentUser.email) : 'MASTRISNO';
+      const roleUser = userRole || 'GURU';
+
+      const payload = {
+        nama: namaUser,
+        role: roleUser,
+        status: status,
+        tanggal: new Date().toISOString().split('T')[0],
+        waktu: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+      };
+
+      const { error } = await sb.from('attendance').insert([payload]);
+
+      if (error) {
+        alert('Gagal mencatat presensi: ' + error.message);
+      } else {
+        alert(`Presensi status '${status}' berhasil dicatat!`);
+        fetchRiwayatPresensi();
+      }
+    }
+
+    async function fetchRiwayatPresensi() {
+      const container = document.getElementById('presensiListContainer');
+      if (!container) return;
+
+      const { data: logs, error } = await sb.from('attendance').select('*').order('created_at', { ascending: false });
+
+      if (error || !logs || logs.length === 0) {
+        container.innerHTML = `<p class="text-slate-400 py-3 text-center">Belum ada riwayat presensi.</p>`;
+        return;
+      }
+
+      container.innerHTML = logs.map(item => `
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
+          <div>
+            <p class="font-bold text-slate-800">${item.nama || 'User'} <span class="text-[10px] text-slate-400 font-normal">(${item.role || 'GURU'})</span></p>
+            <p class="text-[10px] text-slate-500"><i class="fa-regular fa-clock"></i> ${item.tanggal || '-'} • ${item.waktu || '-'}</p>
+          </div>
+          <span class="${item.status === 'Hadir' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'} text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+            ${item.status}
+          </span>
+        </div>
+      `).join('');
+    }
+
+    // EXPORT RIWAYAT PRESENSI KE PDF
+    async function exportAbsenPDF() {
+      const { data: logs } = await sb.from('attendance').select('*').order('created_at', { ascending: false });
+
+      if (!logs || logs.length === 0) {
+        alert('Tidak ada data presensi untuk diekspor!');
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFontSize(14);
+      doc.text('LAPORAN RIWAYAT PRESENSI - BIMBEL SAINS', 14, 15);
+      doc.setFontSize(10);
+      doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
+
+      const tableData = logs.map((item, index) => [
+        index + 1,
+        item.nama || '-',
+        item.role || '-',
+        item.status || '-',
+        item.tanggal || '-',
+        item.waktu || '-'
+      ]);
+
+      doc.autoTable({
+        startY: 28,
+        head: [['No', 'Nama', 'Role', 'Status', 'Tanggal', 'Waktu']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [37, 99, 235] }
+      });
+
+      doc.save(`Laporan_Presensi_BimbelSains_${new Date().toISOString().split('T')[0]}.pdf`);
+    }
+
+    // EXPORT RIWAYAT PRESENSI KE EXCEL
+    async function exportAbsenExcel() {
+      const { data: logs } = await sb.from('attendance').select('*').order('created_at', { ascending: false });
+
+      if (!logs || logs.length === 0) {
+        alert('Tidak ada data presensi untuk diekspor!');
+        return;
+      }
+
+      const formattedData = logs.map((item, index) => ({
+        'No': index + 1,
+        'Nama': item.nama || '-',
+        'Role': item.role || '-',
+        'Status': item.status || '-',
+        'Tanggal': item.tanggal || '-',
+        'Waktu': item.waktu || '-'
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(formattedData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Presensi');
+
+      XLSX.writeFile(workbook, `Laporan_Presensi_BimbelSains_${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
+
+    // 15. MODUL KELOLA JADWAL, NILAI, DATABASE, DLL
     function renderJadwal(c) {
       c.innerHTML = `
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
           <h2 class="text-base font-bold text-slate-800">Jadwal Bimbel</h2>
           <p class="text-xs text-slate-500">Jadwal pembelajaran terhubung langsung dengan modul kelas.</p>
-        </div>
-      `;
-    }
-
-    function renderPresensi(c) {
-      c.innerHTML = `
-        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
-          <h2 class="text-base font-bold text-slate-800">Presensi Kehadiran Hari Ini</h2>
-          <div class="flex gap-2 text-xs">
-            <button onclick="alert('Presensi Hadir Dicatat!')" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded-xl"><i class="fa-solid fa-check"></i> Hadir</button>
-            <button onclick="alert('Presensi Izin Dicatat!')" class="flex-1 bg-amber-500 text-white font-bold py-2 rounded-xl"><i class="fa-solid fa-envelope"></i> Izin</button>
-          </div>
         </div>
       `;
     }
@@ -1088,4 +1211,3 @@
   </script>
 </body>
 </html>
-
