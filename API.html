@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-API Indonesia Search Webapp</title>
+    <title>Webapp Map API Indonesia</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * {
             box-sizing: border-box;
@@ -12,12 +14,12 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         body {
-            background-color: #f4f6f9;
+            background-color: #f8f9fa;
             color: #333;
             padding: 16px;
         }
         .container {
-            max-width: 650px;
+            max-width: 700px;
             margin: 0 auto;
         }
         header {
@@ -29,23 +31,10 @@
             font-size: 24px;
             margin-bottom: 6px;
         }
-        p.subtitle {
-            color: #666;
-            font-size: 13px;
-        }
-
-        /* Search Controls */
-        .search-container {
-            background: white;
-            padding: 16px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            margin-bottom: 20px;
-        }
         .search-box {
             display: flex;
             gap: 8px;
-            margin-bottom: 12px;
+            margin-bottom: 15px;
         }
         input[type="text"] {
             flex: 1;
@@ -54,9 +43,6 @@
             border-radius: 8px;
             font-size: 15px;
             outline: none;
-        }
-        input[type="text"]:focus {
-            border-color: #1a73e8;
         }
         button {
             padding: 12px 20px;
@@ -71,74 +57,21 @@
         button:hover {
             background-color: #1557b0;
         }
-
-        /* Category Filter Pills */
-        .category-pills {
-            display: flex;
-            gap: 6px;
-            overflow-x: auto;
-            padding-bottom: 4px;
-        }
-        .pill {
-            background: #f1f3f4;
-            color: #5f6368;
-            padding: 6px 12px;
-            border-radius: 16px;
-            font-size: 12px;
-            cursor: pointer;
-            white-space: nowrap;
-            font-weight: 600;
-        }
-        .pill.active {
-            background: #1a73e8;
-            color: white;
-        }
-
-        /* Cards Output */
-        .results-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 14px;
-        }
-        .card {
-            background: white;
-            border-radius: 10px;
-            padding: 16px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-        }
-        .card img {
+        /* Elemen Peta */
+        #map {
             width: 100%;
-            height: 180px;
-            object-fit: cover;
+            height: 400px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        }
+        .info-box {
+            margin-top: 12px;
+            background: white;
+            padding: 12px;
             border-radius: 8px;
-            margin-bottom: 10px;
-        }
-        .card-title {
-            font-size: 16px;
-            margin-bottom: 6px;
-            color: #202124;
-        }
-        .card-desc {
             font-size: 13px;
-            color: #5f6368;
-            line-height: 1.5;
-        }
-        .badge {
-            display: inline-block;
-            background: #e8f0fe;
-            color: #1a73e8;
-            font-size: 11px;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
-
-        .loading, .empty-msg {
-            text-align: center;
-            padding: 30px 10px;
-            color: #777;
-            font-size: 14px;
+            color: #555;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
         }
     </style>
 </head>
@@ -146,220 +79,94 @@
 
 <div class="container">
     <header>
-        <h1>🌐 Mesin Pencari API Multi-Fungsi</h1>
-        <p class="subtitle">Satu kolom pencarian untuk Masakan, Sholat, Al-Qur'an, Gempa BMKG, dan Wilayah</p>
+        <h1>🗺️ Peta Interaktif Indonesia</h1>
+        <p style="font-size: 13px; color: #666;">Cari lokasi atau kota di Indonesia menggunakan OpenStreetMap API</p>
     </header>
 
-    <div class="search-container">
-        <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Cari (Soto, Surabaya, Al-Fatihah, Gempa, USD)..." onkeypress="handleKeyPress(event)">
-            <button onclick="executeSearch()">Cari</button>
-        </div>
-
-        <div class="category-pills">
-            <span class="pill active" onclick="setMode('auto', this)">🔄 Otomatis</span>
-            <span class="pill" onclick="setMode('masakan', this)">🍲 Masakan</span>
-            <span class="pill" onclick="setMode('sholat', this)">🕌 Sholat</span>
-            <span class="pill" onclick="setMode('quran', this)">📖 Al-Qur'an</span>
-            <span class="pill" onclick="setMode('bmkg', this)">🌋 Gempa BMKG</span>
-            <span class="pill" onclick="setMode('kurs', this)">💵 Kurs USD</span>
-        </div>
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Cari nama kota/tempat (misal: Surabaya, Monas, Bandung)..." onkeypress="handleKeyPress(event)">
+        <button onclick="searchLocation()">Cari Lokasi</button>
     </div>
 
-    <div class="results-grid" id="resultsGrid">
-        <div class="empty-msg">Ketik kata kunci di atas atau pilih mode pencarian.</div>
+    <!-- Wadah Peta -->
+    <div id="map"></div>
+
+    <div class="info-box" id="infoBox">
+        Klik pada peta atau cari lokasi di atas untuk melihat koordinat Latitude & Longitude.
     </div>
 </div>
 
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    let currentMode = 'auto';
+    // Koordinat Default (Surabaya, Indonesia)
+    let defaultLat = -7.2575;
+    let defaultLng = 112.7521;
+
+    // Inisialisasi Peta
+    const map = L.map('map').setView([defaultLat, defaultLng], 12);
+
+    // Memuat Tile Layer dari OpenStreetMap (Gratis)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Menambahkan Marker awal
+    let marker = L.marker([defaultLat, defaultLng]).addTo(map)
+        .bindPopup('Surabaya, Jawa Timur')
+        .openPopup();
 
     function handleKeyPress(e) {
-        if (e.key === 'Enter') executeSearch();
+        if (e.key === 'Enter') searchLocation();
     }
 
-    function setMode(mode, el) {
-        currentMode = mode;
-        document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-        el.classList.add('active');
-        if (document.getElementById('searchInput').value.trim() !== '') {
-            executeSearch();
-        }
-    }
-
-    async function executeSearch() {
+    // FUNGSI PENCARIAN LOKASI (API Nominatim Geocoding)
+    async function searchLocation() {
         const query = document.getElementById('searchInput').value.trim();
-        const grid = document.getElementById('resultsGrid');
-        
-        if (!query && currentMode !== 'bmkg' && currentMode !== 'kurs') {
-            grid.innerHTML = '<div class="empty-msg">Ketik kata kunci terlebih dahulu.</div>';
-            return;
-        }
+        if (!query) return;
 
-        grid.innerHTML = '<div class="loading">Memuat data dari API...</div>';
-        const q = query.toLowerCase();
+        const infoBox = document.getElementById('infoBox');
+        infoBox.innerHTML = 'Mencari koordinat lokasi...';
 
-        // 1. MODE AUTO ROUTING
-        if (currentMode === 'auto') {
-            if (q.includes('gempa') || q.includes('bmkg')) {
-                fetchBMKGAPI();
-            } else if (q.includes('usd') || q.includes('kurs') || q.includes('dolar') || q.includes('rupiah')) {
-                fetchKursAPI();
-            } else if (q.includes('surat') || q.includes('fatihah') || q.includes('yasin') || q.includes('quran')) {
-                fetchQuranAPI(query);
-            } else if (q.includes('sholat') || q.includes('jadwal') || q.includes('surabaya') || q.includes('jakarta') || q.includes('bandung')) {
-                fetchSholatAPI(query);
-            } else {
-                fetchMasakanAPI(query);
-            }
-        } 
-        // 2. MODE MANUAL PILIHAN
-        else if (currentMode === 'masakan') fetchMasakanAPI(query);
-        else if (currentMode === 'sholat') fetchSholatAPI(query);
-        else if (currentMode === 'quran') fetchQuranAPI(query);
-        else if (currentMode === 'bmkg') fetchBMKGAPI();
-        else if (currentMode === 'kurs') fetchKursAPI();
-    }
-
-    // --- API 1: RESEP MASAKAN (TheMealDB) ---
-    async function fetchMasakanAPI(query) {
-        const grid = document.getElementById('resultsGrid');
-        const searchWord = query || 'chicken';
         try {
-            const res = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(searchWord)}`);
-            const data = await res.json();
-            if (data.meals) {
-                let html = '';
-                data.meals.forEach(m => {
-                    html += `
-                        <div class="card">
-                            <span class="badge">API Masakan</span>
-                            <img src="${m.strMealThumb}" alt="${m.strMeal}">
-                            <h3 class="card-title">${m.strMeal}</h3>
-                            <p class="card-desc"><strong>Kategori:</strong> ${m.strCategory} | <strong>Asal:</strong> ${m.strArea}</p>
-                            <p class="card-desc" style="margin-top:6px;">${m.strInstructions.substring(0, 100)}...</p>
-                        </div>
-                    `;
-                });
-                grid.innerHTML = html;
+            // Memanggil API Geocoding Gratis dari OpenStreetMap
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+            const data = await response.json();
+
+            if (data && data.length > 0) {
+                const lat = parseFloat(data[0].lat);
+                const lon = parseFloat(data[0].lon);
+                const displayName = data[0].display_name;
+
+                // Geser peta ke lokasi baru
+                map.setView([lat, lon], 14);
+
+                // Pindahkan Marker
+                marker.setLatLng([lat, lon])
+                    .bindPopup(`<b>${data[0].name || query}</b><br>${displayName}`)
+                    .openPopup();
+
+                infoBox.innerHTML = `<strong>Lokasi Ditemukan:</strong> ${displayName}<br><strong>Koordinat:</strong> Lat ${lat}, Lng ${lon}`;
             } else {
-                grid.innerHTML = '<div class="empty-msg">Resep masakan tidak ditemukan. Coba kata kunci lain (seperti: Chicken, Soup, Rice).</div>';
+                infoBox.innerHTML = '<span style="color:red;">Lokasi tidak ditemukan. Coba kata kunci yang lebih spesifik.</span>';
             }
         } catch (err) {
-            grid.innerHTML = '<div class="empty-msg" style="color:red;">Gagal mengambil data masakan.</div>';
+            infoBox.innerHTML = '<span style="color:red;">Gagal terhubung ke API Peta.</span>';
         }
     }
 
-    // --- API 2: JADWAL SHOLAT (MyQuran API) ---
-    async function fetchSholatAPI(cityName) {
-        const grid = document.getElementById('resultsGrid');
-        try {
-            const cleanCity = cityName.replace(/sholat|jadwal/gi, '').trim() || 'Surabaya';
-            const cityRes = await fetch(`https://api.myquran.com/v2/sholat/kota/cari/${encodeURIComponent(cleanCity)}`);
-            const cityData = await cityRes.json();
+    // Klik langsung pada peta untuk mendapatkan koordinat
+    map.on('click', function(e) {
+        const lat = e.latlng.lat.toFixed(5);
+        const lng = e.latlng.lng.toFixed(5);
 
-            if (cityData.status && cityData.data.length > 0) {
-                const cityId = cityData.data[0].id;
-                const d = new Date();
-                const year = d.getFullYear();
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
+        marker.setLatLng([lat, lng])
+            .bindPopup(`Titik Koordinat:<br>Lat: ${lat}<br>Lng: ${lng}`)
+            .openPopup();
 
-                const sholatRes = await fetch(`https://api.myquran.com/v2/sholat/jadwal/${cityId}/${year}/${month}/${day}`);
-                const sholatData = await sholatRes.json();
-                const j = sholatData.data.jadwal;
-
-                grid.innerHTML = `
-                    <div class="card">
-                        <span class="badge">API Jadwal Sholat</span>
-                        <h3 class="card-title">🕌 ${sholatData.data.lokasi}</h3>
-                        <p class="card-desc"><strong>Tanggal:</strong> ${j.tanggal}</p>
-                        <hr style="margin:8px 0; border:none; border-top:1px solid #eee;">
-                        <p class="card-desc">Subuh: <strong>${j.subuh}</strong> | Dzuhur: <strong>${j.dzuhur}</strong></p>
-                        <p class="card-desc">Ashar: <strong>${j.ashar}</strong> | Maghrib: <strong>${j.maghrib}</strong></p>
-                        <p class="card-desc">Isya: <strong>${j.isya}</strong></p>
-                    </div>
-                `;
-            } else {
-                grid.innerHTML = '<div class="empty-msg">Kota tidak ditemukan. Masukkan nama kota seperti Surabaya, Jakarta, Medan.</div>';
-            }
-        } catch (err) {
-            grid.innerHTML = '<div class="empty-msg" style="color:red;">Gagal mengambil jadwal sholat.</div>';
-        }
-    }
-
-    // --- API 3: AL-QUR'AN DIGITAL (EQuran API) ---
-    async function fetchQuranAPI(query) {
-        const grid = document.getElementById('resultsGrid');
-        try {
-            const res = await fetch('https://equran.id/api/v2/surat');
-            const data = await res.json();
-            const cleanQ = query.replace(/surat|quran/gi, '').trim().toLowerCase();
-
-            const matched = data.data.filter(s => s.namaLatin.toLowerCase().includes(cleanQ) || s.arti.toLowerCase().includes(cleanQ));
-
-            if (matched.length > 0) {
-                let html = '';
-                matched.slice(0, 5).forEach(s => {
-                    html += `
-                        <div class="card">
-                            <span class="badge">API Al-Qur'an</span>
-                            <h3 class="card-title">Surat ${s.namaLatin} (${s.nama})</h3>
-                            <p class="card-desc"><strong>Arti:</strong> ${s.arti} | <strong>Jumlah Ayat:</strong> ${s.jumlahAyat}</p>
-                            <p class="card-desc" style="margin-top:6px;"><strong>Tempat Turun:</strong> ${s.tempatTurun}</p>
-                        </div>
-                    `;
-                });
-                grid.innerHTML = html;
-            } else {
-                grid.innerHTML = '<div class="empty-msg">Surat Al-Qur\'an tidak ditemukan. Coba ketik Fatihah, Yasin, Al-Ikhlas.</div>';
-            }
-        } catch (err) {
-            grid.innerHTML = '<div class="empty-msg" style="color:red;">Gagal mengambil data Al-Qur\'an.</div>';
-        }
-    }
-
-    // --- API 4: GEMPA TERKINI (BMKG Open Data) ---
-    async function fetchBMKGAPI() {
-        const grid = document.getElementById('resultsGrid');
-        try {
-            const res = await fetch('https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json');
-            const data = await res.json();
-            const g = data.Infogempa.gempa;
-
-            grid.innerHTML = `
-                <div class="card">
-                    <span class="badge" style="background:#fce8e6; color:#d9534f;">API BMKG Gempa Terkini</span>
-                    <h3 class="card-title">⚠️ Gempa Magnitudo ${g.Magnitude} M</h3>
-                    <p class="card-desc"><strong>Wilayah:</strong> ${g.Wilayah}</p>
-                    <p class="card-desc"><strong>Waktu:</strong> ${g.Tanggal} - ${g.Jam}</p>
-                    <p class="card-desc"><strong>Kedalaman:</strong> ${g.Kedalaman} | <strong>Potensi:</strong> ${g.Potensi}</p>
-                </div>
-            `;
-        } catch (err) {
-            grid.innerHTML = '<div class="empty-msg" style="color:red;">Gagal mengambil data BMKG.</div>';
-        }
-    }
-
-    // --- API 5: KURS MATA UANG (ExchangeRate API) ---
-    async function fetchKursAPI() {
-        const grid = document.getElementById('resultsGrid');
-        try {
-            const res = await fetch('https://open.er-api.com/v6/latest/USD');
-            const data = await res.json();
-            const idr = data.rates.IDR;
-
-            grid.innerHTML = `
-                <div class="card">
-                    <span class="badge" style="background:#e6f4ea; color:#137333;">API Kurs Keuangan</span>
-                    <h3 class="card-title">💵 1 USD = Rp ${idr.toLocaleString('id-ID')}</h3>
-                    <p class="card-desc">Data kurs konversi Dollar Amerika Serikat (USD) ke Rupiah (IDR) real-time.</p>
-                </div>
-            `;
-        } catch (err) {
-            grid.innerHTML = '<div class="empty-msg" style="color:red;">Gagal mengambil data kurs.</div>';
-        }
-    }
+        document.getElementById('infoBox').innerHTML = `<strong>Titik Dipilih:</strong> Latitude: ${lat}, Longitude: ${lng}`;
+    });
 </script>
 
 </body>
