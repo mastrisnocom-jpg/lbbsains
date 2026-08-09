@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Engine API Indonesia</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #f8f9fa;
+            color: #333;
+            padding: 20px 15px;
+        }
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        h1 {
+            color: #1a73e8;
+            font-size: 24px;
+            margin-bottom: 6px;
+        }
+        p.subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* Search Box */
+        .search-box {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+        }
+        input[type="text"]:focus {
+            border-color: #1a73e8;
+        }
+        button {
+            padding: 12px 20px;
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #1557b0;
+        }
+
+        /* Result Cards */
+        .results-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .api-card {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            border: 1px solid #e0e0e0;
+        }
+        .api-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #202124;
+            margin-bottom: 6px;
+        }
+        .api-desc {
+            font-size: 13px;
+            color: #5f6368;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        .api-link {
+            display: inline-block;
+            font-size: 13px;
+            color: #1a73e8;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .api-link:hover {
+            text-decoration: underline;
+        }
+
+        .loading, .empty-msg {
+            text-align: center;
+            padding: 40px 10px;
+            color: #777;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🔍 Mesin Pencari API Indonesia</h1>
+        <p class="subtitle">Cari semua Public API Indonesia yang tersedia secara online</p>
+    </header>
+
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Cari API (misal: Wilayah, BMKG, Sholat, Resep)..." onkeyup="searchAPIs()">
+        <button onclick="searchAPIs()">Cari</button>
+    </div>
+
+    <div class="results-container" id="resultsContainer">
+        <div class="loading">Memuat database API Indonesia...</div>
+    </div>
+</div>
+
+<script>
+    let allAPIs = [];
+
+    // Mengambil database resmi DAFTAR-API-LOKAL-INDONESIA langsung dari GitHub
+    const DATABASE_URL = 'https://raw.githubusercontent.com/farizdotid/DAFTAR-API-LOKAL-INDONESIA/master/README.md';
+
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchAPIDatabase();
+    });
+
+    async function fetchAPIDatabase() {
+        const container = document.getElementById('resultsContainer');
+        try {
+            const response = await fetch(DATABASE_URL);
+            const markdownText = await response.text();
+            
+            // Parsing teks Markdown README menjadi array data API
+            allAPIs = parseMarkdownToAPIs(markdownText);
+            
+            if (allAPIs.length > 0) {
+                renderResults(allAPIs);
+            } else {
+                container.innerHTML = '<div class="empty-msg">Gagal memproses data API.</div>';
+            }
+        } catch (error) {
+            container.innerHTML = '<div class="empty-msg" style="color: red;">Gagal terhubung ke database GitHub. Periksa koneksi internet Anda.</div>';
+        }
+    }
+
+    // Fungsi membaca/parsing baris Markdown README GitHub
+    function parseMarkdownToAPIs(markdown) {
+        const apis = [];
+        const lines = markdown.split('\n');
+
+        lines.forEach(line => {
+            // Mencari format baris item Markdown yang berisi tautan [Nama](URL) - Deskripsi
+            const match = line.match(/^\*\s*\[(.*?)\]\((.*?)\)\s*-\s*(.*)/);
+            if (match) {
+                apis.push({
+                    name: match[1].trim(),
+                    link: match[2].trim(),
+                    desc: match[3].trim()
+                });
+            }
+        });
+
+        return apis;
+    }
+
+    // Fungsi utama Pencarian (Search Engine)
+    function searchAPIs() {
+        const query = document.getElementById('searchInput').value.toLowerCase().trim();
+        const container = document.getElementById('resultsContainer');
+
+        if (!query) {
+            renderResults(allAPIs);
+            return;
+        }
+
+        const filtered = allAPIs.filter(api => 
+            api.name.toLowerCase().includes(query) || 
+            api.desc.toLowerCase().includes(query)
+        );
+
+        renderResults(filtered);
+    }
+
+    // Menampilkan hasil pencarian ke tampilan Web
+    function renderResults(list) {
+        const container = document.getElementById('resultsContainer');
+        container.innerHTML = '';
+
+        if (list.length === 0) {
+            container.innerHTML = '<div class="empty-msg">API tidak ditemukan. Coba kata kunci lain.</div>';
+            return;
+        }
+
+        list.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'api-card';
+            card.innerHTML = `
+                <div class="api-title">${item.name}</div>
+                <div class="api-desc">${item.desc}</div>
+                <a class="api-link" href="${item.link}" target="_blank">Buka API / Dokumentasi ➔</a>
+            `;
+            container.appendChild(card);
+        });
+    }
+</script>
+
+</body>
+</html>
