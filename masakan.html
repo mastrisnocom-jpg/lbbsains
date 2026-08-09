@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resep Kuliner Nusantara (Lokal)</title>
+    <title>Resep Kuliner Nusantara</title>
     <style>
         * {
             box-sizing: border-box;
@@ -34,7 +34,6 @@
             font-size: 14px;
         }
         
-        /* Bar Pencarian */
         .search-box {
             display: flex;
             gap: 8px;
@@ -65,7 +64,6 @@
             background-color: #c9302c;
         }
 
-        /* Riwayat Pencarian */
         .history-container {
             margin-bottom: 20px;
         }
@@ -84,13 +82,10 @@
             color: #d9534f;
             background: none;
             border: none;
-            padding: 0;
             cursor: pointer;
-            font-weight: normal;
         }
         .btn-clear:hover {
             text-decoration: underline;
-            background: none;
         }
         .history-tags {
             display: flex;
@@ -104,13 +99,11 @@
             font-size: 13px;
             cursor: pointer;
             color: #495057;
-            transition: background 0.2s;
         }
         .tag:hover {
             background: #dee2e6;
         }
 
-        /* Kartu Resep */
         .recipe-grid {
             display: grid;
             grid-template-columns: 1fr;
@@ -155,11 +148,11 @@
 <div class="container">
     <header>
         <h1>🍲 Resep Kuliner Nusantara</h1>
-        <p class="subtitle">Cari resep masakan khas Indonesia pilihanmu</p>
+        <p class="subtitle">Cari resep masakan pilihanmu</p>
     </header>
 
     <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Soto ayam, Rendang, Ayam..." onkeypress="handleKeyPress(event)">
+        <input type="text" id="searchInput" placeholder="Cari masakan (Contoh: Soup, Chicken, Rice)..." onkeypress="handleKeyPress(event)">
         <button onclick="searchRecipe()">Cari</button>
     </div>
 
@@ -177,6 +170,17 @@
 </div>
 
 <script>
+    // Kamus Kecil Penerjemah Kata Kunci Indonesia -> Inggris (Agar API selalu merespons)
+    const translateMap = {
+        'soto': 'soup',
+        'soto ayam': 'chicken soup',
+        'rendang': 'beef',
+        'ayam': 'chicken',
+        'sate': 'kebab',
+        'ikan': 'fish',
+        'nasi': 'rice'
+    };
+
     document.addEventListener('DOMContentLoaded', () => {
         loadHistory();
     });
@@ -185,37 +189,35 @@
         if (e.key === 'Enter') searchRecipe();
     }
 
-    // Cari Resep dari API
     async function searchRecipe(queryOverride) {
         const inputElement = document.getElementById('searchInput');
-        const query = queryOverride || inputElement.value.trim();
+        const originalQuery = queryOverride || inputElement.value.trim();
 
-        if (!query) return;
+        if (!originalQuery) return;
 
         if (!queryOverride) {
-            saveHistory(query);
+            saveHistory(originalQuery);
         }
 
         const grid = document.getElementById('recipeGrid');
         grid.innerHTML = '<div class="loading">Mencari resep masakan...</div>';
 
-        // Memakai proxy AllOrigins agar bebas masalah CORS
-        const targetUrl = 'https://masak-apa-tommorow.vercel.app/api/search/?q=' + encodeURIComponent(query);
-        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl);
+        // Konversi kata kunci ke Bahasa Inggris jika ada di dictionary
+        const lowerQuery = originalQuery.toLowerCase();
+        const apiQuery = translateMap[lowerQuery] || originalQuery;
 
         try {
-            const response = await fetch(proxyUrl);
-            if (!response.ok) throw new Error('Network error');
-            
+            // Menggunakan API TheMealDB yang 100% stabil & gratis
+            const response = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(apiQuery)}`);
             const result = await response.json();
 
-            if (result.status && result.results && result.results.length > 0) {
-                renderRecipes(result.results);
+            if (result.meals && result.meals.length > 0) {
+                renderRecipes(result.meals);
             } else {
-                grid.innerHTML = '<div class="empty-msg">Resep tidak ditemukan. Coba kata kunci masakan lain.</div>';
+                grid.innerHTML = '<div class="empty-msg">Resep tidak ditemukan.<br>Coba kata kunci lain (seperti: Chicken, Soup, Rice, Beef).</div>';
             }
         } catch (error) {
-            grid.innerHTML = '<div class="empty-msg" style="color:#d9534f;">Gagal mengambil data resep.<br>Periksa koneksi internet Anda.</div>';
+            grid.innerHTML = '<div class="empty-msg" style="color:#d9534f;">Gagal terhubung ke server API. Periksa koneksi internet Anda.</div>';
         }
     }
 
@@ -227,30 +229,22 @@
             const card = document.createElement('div');
             card.className = 'card';
             card.innerHTML = `
-                <img src="${item.thumb || 'https://via.placeholder.com/300x180?text=No+Image'}" alt="${item.title}" onerror="this.src='https://via.placeholder.com/300x180?text=Gambar+Tidak+Tersedia'">
+                <img src="${item.strMealThumb}" alt="${item.strMeal}">
                 <div class="card-body">
-                    <h3 class="card-title">${item.title}</h3>
-                    <p class="card-desc">Waktu: ${item.times || '-'} | Porsi: ${item.portion || '-'}</p>
+                    <h3 class="card-title">${item.strMeal}</h3>
+                    <p class="card-desc">Kategori: ${item.strCategory} | Asal: ${item.strArea}</p>
                 </div>
             `;
             grid.appendChild(card);
         });
     }
 
-    // --- FITUR MANAJEMEN RIWAYAT LOKAL (localStorage) ---
-
+    // --- RIWAYAT LOKAL ---
     function saveHistory(query) {
         let history = JSON.parse(localStorage.getItem('recipeHistoryLocal')) || [];
-        
-        // Hapus duplikat
         history = history.filter(item => item.toLowerCase() !== query.toLowerCase());
-        
-        // Tambahkan ke urutan paling depan
         history.unshift(query);
-        
-        // Batasi maksimal 8 riwayat
         if (history.length > 8) history.pop();
-
         localStorage.setItem('recipeHistoryLocal', JSON.stringify(history));
         loadHistory();
     }
@@ -258,7 +252,6 @@
     function loadHistory() {
         const historyContainer = document.getElementById('historyTags');
         const history = JSON.parse(localStorage.getItem('recipeHistoryLocal')) || [];
-
         historyContainer.innerHTML = '';
 
         if (history.length === 0) {
