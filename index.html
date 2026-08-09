@@ -146,6 +146,7 @@
     let currentUser = null;
     let userRole = 'SUPERADMIN';
     let currentView = 'dashboard';
+    let quizTimerInterval = null; // Variabel penampung interval waktu
 
     document.addEventListener('DOMContentLoaded', async () => {
       await recordVisitorReal();
@@ -312,7 +313,7 @@
       const role = document.getElementById('regRole').value;
       const btn = document.getElementById('btnRegSubmit');
 
-      btn.innerText = 'Memproses Pendaftaran...';
+      btn.innerText = 'Memproses...';
       btn.disabled = true;
 
       const { data, error } = await sb.auth.signUp({ email, password });
@@ -344,6 +345,7 @@
 
     async function handleLogout() {
       if (confirm('Keluar dari aplikasi?')) {
+        if (quizTimerInterval) clearInterval(quizTimerInterval);
         await sb.auth.signOut();
         currentUser = null;
         renderLoginView();
@@ -352,6 +354,7 @@
 
     // ROUTER NAVIGATION
     function navigateView(viewName) {
+      if (quizTimerInterval) clearInterval(quizTimerInterval); // Reset timer jika berpindah halaman
       currentView = viewName;
       const main = document.getElementById('mainContent');
       const btnBack = document.getElementById('btnBack');
@@ -364,19 +367,9 @@
 
       switch (viewName) {
         case 'dashboard': renderDashboard(main); break;
-        case 'management_panel': renderManagementPanel(main); break;
         case 'semua_menu': renderSemuaMenu(main); break;
-        case 'kelola_user': renderKelolaUser(main); break;
-        case 'kelola_siswa': renderKelolaSiswa(main); break;
-        case 'kelola_kelas': renderKelolaKelas(main); break;
-        case 'jadwal': renderJadwal(main); break;
         case 'presensi': renderPresensi(main); break;
-        case 'keuangan': renderKeuangan(main); break;
         case 'laporan': renderLaporan(main); break;
-        case 'nilai': renderNilai(main); break;
-        case 'broadcast': renderBroadcast(main); break;
-        case 'setting_web': renderSettingWeb(main); break;
-        case 'database': renderDatabase(main); break;
         case 'profil': renderProfil(main); break;
         case 'soal_guru': renderSoalGuru(main); break;
         case 'soal_siswa': renderSoalSiswa(main); break;
@@ -406,20 +399,6 @@
         </div>
 
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-          <div class="flex items-center justify-between mb-1.5">
-            <div class="flex items-center gap-2">
-              <i class="fa-solid fa-house text-brand-600 text-sm"></i>
-              <h3 class="text-xs font-bold text-brand-900">Ringkasan Keuangan & Operasional</h3>
-            </div>
-            <span class="bg-slate-900 text-white text-[9px] font-bold px-2 py-0.5 rounded uppercase">AKSES FULL</span>
-          </div>
-          <p class="text-[11px] text-slate-500 mb-3">Sistem terintegrasi secara real-time dengan Supabase.</p>
-          <button onclick="navigateView('management_panel')" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md transition">
-            Buka Management Panel
-          </button>
-        </div>
-
-        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
           <div class="grid grid-cols-4 gap-y-4 gap-x-2 text-center">
             
             <div onclick="navigateView('soal_siswa')" class="flex flex-col items-center cursor-pointer group">
@@ -436,39 +415,11 @@
               <span class="text-[10px] font-bold text-slate-700 mt-1.5">Bank Soal Guru</span>
             </div>
 
-            <div onclick="navigateView('kelola_user')" class="flex flex-col items-center cursor-pointer group">
-              <div class="w-11 h-11 rounded-full bg-red-500 text-white flex items-center justify-center text-lg shadow-md group-hover:scale-105 transition">
-                <i class="fa-solid fa-users-gear"></i>
+            <div onclick="navigateView('presensi')" class="flex flex-col items-center cursor-pointer group">
+              <div class="w-11 h-11 rounded-full bg-emerald-600 text-white flex items-center justify-center text-lg shadow-md group-hover:scale-105 transition">
+                <i class="fa-regular fa-calendar-check"></i>
               </div>
-              <span class="text-[10px] font-bold text-slate-700 mt-1.5">Kelola User</span>
-            </div>
-
-            <div onclick="navigateView('keuangan')" class="flex flex-col items-center cursor-pointer group">
-              <div class="w-11 h-11 rounded-full bg-amber-500 text-white flex items-center justify-center text-lg shadow-md group-hover:scale-105 transition">
-                <i class="fa-solid fa-chart-pie"></i>
-              </div>
-              <span class="text-[10px] font-bold text-slate-700 mt-1.5">Keuangan</span>
-            </div>
-
-            <div onclick="navigateView('kelola_kelas')" class="flex flex-col items-center cursor-pointer group">
-              <div class="w-11 h-11 rounded-full bg-brand-500 text-white flex items-center justify-center text-lg shadow-md group-hover:scale-105 transition">
-                <i class="fa-solid fa-laptop"></i>
-              </div>
-              <span class="text-[10px] font-bold text-slate-700 mt-1.5">Kelola Kelas</span>
-            </div>
-
-            <div onclick="navigateView('laporan')" class="flex flex-col items-center cursor-pointer group">
-              <div class="w-11 h-11 rounded-full bg-emerald-500 text-white flex items-center justify-center text-lg shadow-md group-hover:scale-105 transition">
-                <i class="fa-solid fa-file-invoice"></i>
-              </div>
-              <span class="text-[10px] font-bold text-slate-700 mt-1.5">Laporan Full</span>
-            </div>
-
-            <div onclick="navigateView('broadcast')" class="flex flex-col items-center cursor-pointer group">
-              <div class="w-11 h-11 rounded-full bg-pink-500 text-white flex items-center justify-center text-lg shadow-md group-hover:scale-105 transition">
-                <i class="fa-solid fa-bullhorn"></i>
-              </div>
-              <span class="text-[10px] font-bold text-slate-700 mt-1.5">Broadcast</span>
+              <span class="text-[10px] font-bold text-slate-700 mt-1.5">Presensi</span>
             </div>
 
             <div onclick="navigateView('semua_menu')" class="flex flex-col items-center cursor-pointer group">
@@ -490,28 +441,50 @@
     }
 
     // ==========================================
-    // MODUL BARU: INPUT BANK SOAL KHUSUS GURU
+    // MODUL GURU: INPUT SOAL DENGAN DURASI WAKTU
     // ==========================================
     async function renderSoalGuru(container) {
       container.innerHTML = `
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
           <div class="flex justify-between items-center">
-            <h2 class="text-base font-bold text-slate-800">Bank Soal & Kunci Jawaban (Guru)</h2>
+            <h2 class="text-base font-bold text-slate-800">Bank Soal & Pengatur Waktu</h2>
             <button onclick="openModalTambahSoal()" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition">+ Buat Soal</button>
           </div>
-          <p class="text-[11px] text-slate-500">Guru menentukan pertanyaan, opsi pilihan, dan kunci jawaban yang tersembunyi dari murid.</p>
 
           <div id="quizGuruListContainer" class="space-y-2 text-xs pt-2">
             <p class="text-slate-400 italic">Memuat bank soal...</p>
           </div>
         </div>
+
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
+          <div class="flex justify-between items-center">
+            <h3 class="text-xs font-bold text-slate-800">Jawaban Murid & Approval</h3>
+            <div class="flex gap-1.5">
+              <button onclick="exportHasilKuisPDF()" class="bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow transition">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button onclick="exportHasilKuisExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow transition">
+                <i class="fa-solid fa-file-excel"></i> Excel
+              </button>
+            </div>
+          </div>
+
+          <div id="jawabanSiswaContainer" class="space-y-2 text-xs">
+            <p class="text-slate-400 italic text-center py-2">Memuat jawaban murid...</p>
+          </div>
+        </div>
       `;
 
+      await fetchBankSoalGuru();
+      await fetchJawabanSiswaGuru();
+    }
+
+    async function fetchBankSoalGuru() {
       const { data: quizzes } = await sb.from('quizzes').select('*').order('created_at', { ascending: false });
       const listContainer = document.getElementById('quizGuruListContainer');
 
       if (!quizzes || quizzes.length === 0) {
-        listContainer.innerHTML = `<p class="text-slate-400 py-3 text-center">Belum ada kuis atau soal yang dibuat.</p>`;
+        listContainer.innerHTML = `<p class="text-slate-400 py-3 text-center">Belum ada soal yang dibuat.</p>`;
         return;
       }
 
@@ -519,25 +492,59 @@
         <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
           <div class="flex justify-between items-start">
             <span class="bg-teal-100 text-teal-800 font-bold text-[9px] px-2 py-0.5 rounded">${q.mata_pelajaran || 'Umum'}</span>
-            <span class="bg-emerald-100 text-emerald-800 font-bold text-[10px] px-2 py-0.5 rounded">Kunci: ${q.kunci_jawaban}</span>
+            <div class="flex gap-1">
+              <span class="bg-blue-100 text-blue-800 font-bold text-[9px] px-2 py-0.5 rounded"><i class="fa-regular fa-clock"></i> ${q.durasi_menit || 10} Menit</span>
+              <span class="bg-emerald-100 text-emerald-800 font-bold text-[9px] px-2 py-0.5 rounded">Kunci: ${q.kunci_jawaban}</span>
+            </div>
           </div>
           <p class="font-bold text-slate-800 text-xs">${idx + 1}. ${q.pertanyaan}</p>
-          <div class="grid grid-cols-2 gap-1 text-[10px] text-slate-600 pt-1">
-            <p class="${q.kunci_jawaban === 'A' ? 'font-bold text-emerald-600' : ''}">A. ${q.pilihan_a}</p>
-            <p class="${q.kunci_jawaban === 'B' ? 'font-bold text-emerald-600' : ''}">B. ${q.pilihan_b}</p>
-            <p class="${q.kunci_jawaban === 'C' ? 'font-bold text-emerald-600' : ''}">C. ${q.pilihan_c}</p>
-            <p class="${q.kunci_jawaban === 'D' ? 'font-bold text-emerald-600' : ''}">D. ${q.pilihan_d}</p>
+        </div>
+      `).join('');
+    }
+
+    async function fetchJawabanSiswaGuru() {
+      const container = document.getElementById('jawabanSiswaContainer');
+      const { data: results } = await sb.from('quiz_results').select('*, quizzes(pertanyaan, kunci_jawaban, mata_pelajaran)').order('created_at', { ascending: false });
+
+      if (!results || results.length === 0) {
+        container.innerHTML = `<p class="text-slate-400 py-3 text-center">Belum ada jawaban murid yang masuk.</p>`;
+        return;
+      }
+
+      container.innerHTML = results.map(r => `
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
+          <div class="space-y-0.5">
+            <p class="font-bold text-slate-800">${r.nama_siswa} <span class="text-[10px] text-slate-500 font-normal">(${r.quizzes?.mata_pelajaran || 'Mapel'})</span></p>
+            <p class="text-[10px] text-slate-600">Jawaban: <strong class="text-indigo-600">${r.jawaban_siswa}</strong> | Kunci: <strong>${r.quizzes?.kunci_jawaban}</strong></p>
+            <p class="text-[10px] ${r.is_correct ? 'text-emerald-600 font-bold' : 'text-red-500 font-bold'}">${r.is_correct ? 'BENAR' : 'SALAH'} (Skor: ${r.skor})</p>
+          </div>
+
+          <div>
+            ${r.status_approval === 'APPROVED' 
+              ? `<span class="bg-emerald-100 text-emerald-700 text-[9px] font-bold px-2 py-1 rounded-lg"><i class="fa-solid fa-circle-check"></i> Approved</span>`
+              : `<button onclick="approveJawabanMurid('${r.id}')" class="bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg shadow transition">Approve</button>`
+            }
           </div>
         </div>
       `).join('');
     }
 
+    async function approveJawabanMurid(resultId) {
+      const { error } = await sb.from('quiz_results').update({ status_approval: 'APPROVED' }).eq('id', resultId);
+      if (error) alert('Gagal approve: ' + error.message);
+      else {
+        alert('Jawaban siswa berhasil di-Approve!');
+        fetchJawabanSiswaGuru();
+      }
+    }
+
     function openModalTambahSoal() {
       const modal = document.getElementById('modalCard');
       modal.innerHTML = `
-        <h3 class="text-sm font-bold text-slate-800 mb-3">Buat Soal & Kunci Jawaban</h3>
+        <h3 class="text-sm font-bold text-slate-800 mb-3">Buat Soal & Pengatur Waktu</h3>
         <form onsubmit="saveSoalReal(event)" class="space-y-2 text-xs">
-          <div><label class="font-bold text-slate-600">Mata Pelajaran</label><input type="text" id="qMapel" required placeholder="Ex: Matematika / Fisika" class="w-full border p-2 rounded-lg mt-1"></div>
+          <div><label class="font-bold text-slate-600">Mata Pelajaran</label><input type="text" id="qMapel" required placeholder="Ex: Matematika" class="w-full border p-2 rounded-lg mt-1"></div>
+          <div><label class="font-bold text-slate-600">Durasi Pengerjaan (Dalam Menit)</label><input type="number" id="qDurasi" required min="1" value="10" placeholder="Ex: 15" class="w-full border p-2 rounded-lg mt-1 font-bold text-indigo-600"></div>
           <div><label class="font-bold text-slate-600">Pertanyaan Soal</label><textarea id="qPertanyaan" required rows="2" placeholder="Tuliskan soal..." class="w-full border p-2 rounded-lg mt-1"></textarea></div>
           <div class="grid grid-cols-2 gap-2">
             <div><label class="font-bold text-slate-600">Pilihan A</label><input type="text" id="qA" required class="w-full border p-2 rounded-lg mt-1"></div>
@@ -566,6 +573,7 @@
     async function saveSoalReal(e) {
       e.preventDefault();
       const mata_pelajaran = document.getElementById('qMapel').value;
+      const durasi_menit = parseInt(document.getElementById('qDurasi').value) || 10;
       const pertanyaan = document.getElementById('qPertanyaan').value;
       const pilihan_a = document.getElementById('qA').value;
       const pilihan_b = document.getElementById('qB').value;
@@ -574,43 +582,149 @@
       const kunci_jawaban = document.getElementById('qKunci').value;
 
       const { error } = await sb.from('quizzes').insert([{
-        judul: 'Kuis Interaktif', mata_pelajaran, pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, kunci_jawaban
+        judul: 'Latihan Soal', mata_pelajaran, durasi_menit, pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, kunci_jawaban
       }]);
 
       if (error) alert('Gagal menyimpan soal: ' + error.message);
       else { closeModal(); renderSoalGuru(document.getElementById('mainContent')); }
     }
 
+    async function exportHasilKuisPDF() {
+      const { data: results } = await sb.from('quiz_results').select('*, quizzes(pertanyaan, kunci_jawaban, mata_pelajaran)').order('created_at', { ascending: false });
+
+      if (!results || results.length === 0) return alert('Tidak ada data hasil kuis untuk diekspor!');
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFontSize(14);
+      doc.text('REKAP HASIL LATIHAN SOAL MURID - BIMBEL SAINS', 14, 15);
+
+      const tableData = results.map((r, i) => [
+        i + 1, r.nama_siswa, r.quizzes?.mata_pelajaran || '-', r.jawaban_siswa, r.quizzes?.kunci_jawaban || '-', r.is_correct ? 'BENAR' : 'SALAH', r.status_approval
+      ]);
+
+      doc.autoTable({
+        startY: 22,
+        head: [['No', 'Nama Siswa', 'Mapel', 'Jwb Siswa', 'Kunci', 'Hasil', 'Approval']],
+        body: tableData,
+        headStyles: { fillColor: [13, 148, 136] }
+      });
+
+      doc.save(`Hasil_Kuis_Murid_${new Date().toISOString().split('T')[0]}.pdf`);
+    }
+
+    async function exportHasilKuisExcel() {
+      const { data: results } = await sb.from('quiz_results').select('*, quizzes(pertanyaan, kunci_jawaban, mata_pelajaran)').order('created_at', { ascending: false });
+
+      if (!results || results.length === 0) return alert('Tidak ada data hasil kuis!');
+
+      const formattedData = results.map((r, i) => ({
+        'No': i + 1, 'Nama Siswa': r.nama_siswa, 'Mata Pelajaran': r.quizzes?.mata_pelajaran || '-', 'Jawaban Siswa': r.jawaban_siswa, 'Kunci Jawaban': r.quizzes?.kunci_jawaban || '-', 'Hasil': r.is_correct ? 'BENAR' : 'SALAH', 'Status Approval': r.status_approval
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(formattedData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Hasil Kuis');
+      XLSX.writeFile(workbook, `Hasil_Kuis_Murid_${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
+
     // ==========================================
-    // MODUL BARU: PENGERJAAN SOAL KHUSUS SISWA
+    // MODUL SISWA: KLIK MULAI SOAL & TIMER REALTIME
     // ==========================================
     async function renderSoalSiswa(container) {
+      const { data: quizzes } = await sb.from('quizzes').select('*').order('created_at', { ascending: false });
+
+      let durasiTotal = 10;
+      if (quizzes && quizzes.length > 0) {
+        durasiTotal = quizzes[0].durasi_menit || 10;
+      }
+
       container.innerHTML = `
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
-          <h2 class="text-base font-bold text-slate-800">Ruang Latihan Soal Siswa</h2>
-          <p class="text-[11px] text-slate-500">Pilih jawaban yang menurut Anda benar, lalu tekan tombol Kumpul Jawaban.</p>
-
-          <form onsubmit="submitJawabanSiswa(event)" id="formKerjaKuis" class="space-y-4 pt-2">
-            <div id="quizSiswaListContainer" class="space-y-3">
-              <p class="text-slate-400 italic text-center">Memuat latihan soal...</p>
+          <div class="flex justify-between items-center">
+            <h2 class="text-base font-bold text-slate-800">Ruang Latihan Soal Siswa</h2>
+            <!-- BOX TIMER STREAMING -->
+            <div id="boxTimer" class="bg-slate-900 text-amber-400 font-mono font-black text-xs px-3 py-1 rounded-lg flex items-center gap-1.5 shadow hidden">
+              <i class="fa-regular fa-clock text-amber-400"></i>
+              <span id="timerText">00:00</span>
             </div>
-            <button type="submit" id="btnSubmitKuis" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-xs shadow transition hidden">
-              Kumpulkan & Periksa Nilai
+          </div>
+
+          <!-- CARD WELCOME & TOMBOL MULAI -->
+          <div id="startQuizCard" class="p-5 bg-indigo-50 border border-indigo-100 rounded-2xl text-center space-y-3">
+            <div class="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xl mx-auto shadow">
+              <i class="fa-solid fa-stopwatch"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-800 text-sm">Siap Memulai Latihan Soal?</h3>
+              <p class="text-xs text-slate-500 mt-1">Waktu pengerjaan ditentukan Guru: <strong class="text-indigo-600">${durasiTotal} Menit</strong>.</p>
+            </div>
+            <button onclick="mulaiKerjakanSoal(${durasiTotal})" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-xs shadow-md transition">
+              <i class="fa-solid fa-play mr-1"></i> Mulai Kerjakan Soal Sekarang
+            </button>
+          </div>
+
+          <!-- FORM SOAL (TERSEMBUNYI SEBELUM TOMBOL MULAI DIKLIK) -->
+          <form onsubmit="submitJawabanSiswa(event)" id="formKerjaKuis" class="space-y-4 pt-2 hidden">
+            <div id="quizSiswaListContainer" class="space-y-3"></div>
+            <button type="submit" id="btnSubmitKuis" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-xs shadow transition">
+              Kumpulkan Jawaban
             </button>
           </form>
         </div>
+
+        <!-- RIWAYAT PENGERJAAN SISWA -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
+          <h3 class="text-xs font-bold text-slate-800">Riwayat Jawaban & Status Approval</h3>
+          <div id="riwayatKuisSiswaContainer" class="space-y-2 text-xs">
+            <p class="text-slate-400 italic text-center py-2">Memuat riwayat pengerjaan...</p>
+          </div>
+        </div>
       `;
 
+      await fetchRiwayatKuisSiswa();
+    }
+
+    async function mulaiKerjakanSoal(durasiMenit) {
+      document.getElementById('startQuizCard').classList.add('hidden');
+      document.getElementById('formKerjaKuis').classList.remove('hidden');
+      document.getElementById('boxTimer').classList.remove('hidden');
+
+      await fetchSoalSiswa();
+
+      // MEMULAI HITUNG MUNDUR (TIMER)
+      let sisaWaktuDetik = durasiMenit * 60;
+      const timerDisplay = document.getElementById('timerText');
+
+      if (quizTimerInterval) clearInterval(quizTimerInterval);
+
+      quizTimerInterval = setInterval(() => {
+        let menit = Math.floor(sisaWaktuDetik / 60);
+        let detik = sisaWaktuDetik % 60;
+
+        menit = menit < 10 ? '0' + menit : menit;
+        detik = detik < 10 ? '0' + detik : detik;
+
+        timerDisplay.innerText = `${menit}:${detik}`;
+
+        if (sisaWaktuDetik <= 0) {
+          clearInterval(quizTimerInterval);
+          alert('Waktu Pengerjaan Telah Habis! Jawaban Anda otomatis dikumpulkan.');
+          document.getElementById('formKerjaKuis').requestSubmit();
+        }
+
+        sisaWaktuDetik--;
+      }, 1000);
+    }
+
+    async function fetchSoalSiswa() {
       const { data: quizzes } = await sb.from('quizzes').select('*').order('created_at', { ascending: false });
       const listContainer = document.getElementById('quizSiswaListContainer');
-      const btnSubmit = document.getElementById('btnSubmitKuis');
 
       if (!quizzes || quizzes.length === 0) {
-        listContainer.innerHTML = `<p class="text-slate-400 py-3 text-center">Belum ada latihan soal yang tersedia dari Guru.</p>`;
+        listContainer.innerHTML = `<p class="text-slate-400 py-3 text-center">Belum ada latihan soal tersedia.</p>`;
         return;
       }
-
-      btnSubmit.classList.remove('hidden');
 
       listContainer.innerHTML = quizzes.map((q, idx) => `
         <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
@@ -619,7 +733,7 @@
           
           <div class="space-y-1.5 text-xs text-slate-700 pt-1">
             <label class="flex items-center gap-2 p-2 bg-white rounded-lg border cursor-pointer hover:bg-indigo-50">
-              <input type="radio" name="q_${q.id}" value="A" required> <span>A. ${q.pilihan_a}</span>
+              <input type="radio" name="q_${q.id}" value="A"> <span>A. ${q.pilihan_a}</span>
             </label>
             <label class="flex items-center gap-2 p-2 bg-white rounded-lg border cursor-pointer hover:bg-indigo-50">
               <input type="radio" name="q_${q.id}" value="B"> <span>B. ${q.pilihan_b}</span>
@@ -637,22 +751,79 @@
 
     async function submitJawabanSiswa(e) {
       e.preventDefault();
+      if (quizTimerInterval) clearInterval(quizTimerInterval); // Hentikan timer saat dikumpulkan
+
       const form = e.target;
+      const namaUser = currentUser ? (currentUser.nama_lengkap || currentUser.email) : 'MASTRISNO';
       const { data: quizzes } = await sb.from('quizzes').select('*');
 
-      let jumlahBenar = 0;
-      let totalSoal = quizzes.length;
+      const payloads = [];
 
       quizzes.forEach(q => {
-        const selected = form[`q_${q.id}`]?.value;
-        if (selected === q.kunci_jawaban) {
-          jumlahBenar++;
-        }
+        const selected = form[`q_${q.id}`]?.value || '-';
+        const isCorrect = (selected === q.kunci_jawaban);
+        payloads.push({
+          quiz_id: q.id,
+          nama_siswa: namaUser,
+          jawaban_siswa: selected,
+          is_correct: isCorrect,
+          skor: isCorrect ? 100 : 0,
+          status_approval: 'PENDING'
+        });
       });
 
-      const nilaiAkhir = Math.round((jumlahBenar / totalSoal) * 100);
+      const { error } = await sb.from('quiz_results').insert(payloads);
 
-      alert(`Hasil Latihan Soal Anda:\n\nBenar: ${jumlahBenar} dari ${totalSoal} Soal\nNilai Akhir: ${nilaiAkhir}/100`);
+      if (error) {
+        alert('Gagal mengumpulkan jawaban: ' + error.message);
+      } else {
+        alert('Jawaban berhasil dikirim! Menunggu approval dari Guru.');
+        renderSoalSiswa(document.getElementById('mainContent'));
+      }
+    }
+
+    async function fetchRiwayatKuisSiswa() {
+      const container = document.getElementById('riwayatKuisSiswaContainer');
+      const namaUser = currentUser ? (currentUser.nama_lengkap || currentUser.email) : 'MASTRISNO';
+
+      const { data: myResults } = await sb.from('quiz_results')
+        .select('*, quizzes(pertanyaan, kunci_jawaban, mata_pelajaran)')
+        .eq('nama_siswa', namaUser)
+        .order('created_at', { ascending: false });
+
+      if (!myResults || myResults.length === 0) {
+        container.innerHTML = `<p class="text-slate-400 py-3 text-center">Anda belum mengerjakan latihan soal.</p>`;
+        return;
+      }
+
+      container.innerHTML = myResults.map(r => {
+        const isApproved = r.status_approval === 'APPROVED';
+
+        return `
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-slate-800 text-[11px]">${r.quizzes?.mata_pelajaran || 'Soal'}</span>
+              ${isApproved 
+                ? `<span class="bg-emerald-100 text-emerald-800 font-bold text-[9px] px-2 py-0.5 rounded">APPROVED</span>`
+                : `<span class="bg-amber-100 text-amber-800 font-bold text-[9px] px-2 py-0.5 rounded">MENUNGGU APPROVAL GURU</span>`
+              }
+            </div>
+            <p class="text-slate-600 text-[11px]">${r.quizzes?.pertanyaan || 'Pertanyaan'}</p>
+            <p class="text-[10px] text-slate-500">Jawaban Anda: <strong class="text-indigo-600">${r.jawaban_siswa}</strong></p>
+
+            ${isApproved ? `
+              <div class="pt-1 border-t border-slate-200 flex justify-between items-center text-[10px]">
+                <span class="${r.is_correct ? 'text-emerald-600 font-bold' : 'text-red-500 font-bold'}">
+                  ${r.is_correct ? '✓ Jawaban BENAR' : '✗ Jawaban SALAH'}
+                </span>
+                <span class="text-slate-600">Kunci Jawaban: <strong class="text-slate-800">${r.quizzes?.kunci_jawaban}</strong></span>
+              </div>
+            ` : `
+              <p class="text-[10px] text-amber-600 italic pt-0.5">Kunci jawaban dan koreksi akan terbuka setelah di-approve oleh Guru.</p>
+            `}
+          </div>
+        `;
+      }).join('');
     }
 
     // MODUL PRESENSI & RIWAYAT PRESENSI REAL-TIME
@@ -768,19 +939,24 @@
       XLSX.writeFile(workbook, 'Laporan_Presensi.xlsx');
     }
 
-    // MODUL MANAJEMEN LAINNYA
-    async function renderManagementPanel(container) { container.innerHTML = `<div class="bg-white p-4 rounded-2xl"><h2 class="font-bold">Management Panel</h2></div>`; }
-    async function renderKelolaUser(container) { container.innerHTML = `<div class="bg-white p-4 rounded-2xl"><h2 class="font-bold">Kelola User</h2></div>`; }
-    async function renderKelolaSiswa(container) { container.innerHTML = `<div class="bg-white p-4 rounded-2xl"><h2 class="font-bold">Kelola Siswa</h2></div>`; }
-    async function renderKelolaKelas(container) { container.innerHTML = `<div class="bg-white p-4 rounded-2xl"><h2 class="font-bold">Kelola Kelas</h2></div>`; }
-    async function renderKeuangan(container) { container.innerHTML = `<div class="bg-white p-4 rounded-2xl"><h2 class="font-bold">Keuangan</h2></div>`; }
-    async function renderBroadcast(container) { container.innerHTML = `<div class="bg-white p-4 rounded-2xl"><h2 class="font-bold">Broadcast</h2></div>`; }
-    async function renderSettingWeb(container) { container.innerHTML = `<div class="bg-white p-4 rounded-2xl"><h2 class="font-bold">Setting Web</h2></div>`; }
-    async function renderLaporan(container) { container.innerHTML = `<div class="bg-white p-4 rounded-2xl"><h2 class="font-bold">Laporan Full</h2></div>`; }
-    function renderJadwal(c) { c.innerHTML = `<div class="bg-white p-4 rounded-2xl"><h2 class="font-bold">Jadwal</h2></div>`; }
-    function renderNilai(c) { c.innerHTML = `<div class="bg-white p-4 rounded-2xl"><h2 class="font-bold">Nilai</h2></div>`; }
-    async function renderDatabase(c) { c.innerHTML = `<div class="bg-white p-4 rounded-2xl"><h2 class="font-bold">Database Health</h2></div>`; }
-    
+    function renderLaporan(container) {
+      container.innerHTML = `
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-4">
+          <h2 class="text-base font-bold text-slate-800">Pusat Laporan Full</h2>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <button onclick="exportHasilKuisPDF()" class="p-3 bg-red-50 border border-red-200 rounded-xl text-left hover:bg-red-100 transition">
+              <i class="fa-solid fa-file-pdf text-red-600 text-base mb-1"></i>
+              <p class="font-bold text-slate-800">Ekspor Kuis (PDF)</p>
+            </button>
+            <button onclick="exportHasilKuisExcel()" class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-left hover:bg-emerald-100 transition">
+              <i class="fa-solid fa-file-excel text-emerald-600 text-base mb-1"></i>
+              <p class="font-bold text-slate-800">Ekspor Kuis (Excel)</p>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
     function renderSemuaMenu(container) {
       container.innerHTML = `
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-4">
