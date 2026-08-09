@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resep Kuliner Nusantara</title>
-    <!-- SDK Supabase JS -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>Resep Kuliner Nusantara (Lokal)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -71,10 +69,28 @@
         .history-container {
             margin-bottom: 20px;
         }
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
         .history-title {
             font-size: 13px;
             color: #666;
-            margin-bottom: 8px;
+        }
+        .btn-clear {
+            font-size: 12px;
+            color: #d9534f;
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            font-weight: normal;
+        }
+        .btn-clear:hover {
+            text-decoration: underline;
+            background: none;
         }
         .history-tags {
             display: flex;
@@ -94,7 +110,7 @@
             background: #dee2e6;
         }
 
-        /* Daftar Kartu Resep */
+        /* Kartu Resep */
         .recipe-grid {
             display: grid;
             grid-template-columns: 1fr;
@@ -148,10 +164,11 @@
     </div>
 
     <div class="history-container">
-        <div class="history-title">Riwayat Pencarian Anda:</div>
-        <div class="history-tags" id="historyTags">
-            <span style="font-size: 12px; color: #aaa;">Memuat riwayat...</span>
+        <div class="history-header">
+            <span class="history-title">Riwayat Pencarian Lokal:</span>
+            <button class="btn-clear" onclick="clearHistory()">Hapus Riwayat</button>
         </div>
+        <div class="history-tags" id="historyTags"></div>
     </div>
 
     <div class="recipe-grid" id="recipeGrid">
@@ -160,16 +177,6 @@
 </div>
 
 <script>
-    // 1. ISIKAN DENGAN KUNCI SUPABASE ANDA
-    const SUPABASE_URL = 'YOUR_SUPABASE_URL_HERE';
-    const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE';
-
-    // Inisialisasi Supabase
-    let supabase = null;
-    if (SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE') {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    }
-
     document.addEventListener('DOMContentLoaded', () => {
         loadHistory();
     });
@@ -178,14 +185,13 @@
         if (e.key === 'Enter') searchRecipe();
     }
 
-    // Fungsi Utama Mencari Resep
+    // Cari Resep dari API
     async function searchRecipe(queryOverride) {
         const inputElement = document.getElementById('searchInput');
         const query = queryOverride || inputElement.value.trim();
 
         if (!query) return;
 
-        // Simpan ke riwayat jika pencarian baru
         if (!queryOverride) {
             saveHistory(query);
         }
@@ -193,13 +199,13 @@
         const grid = document.getElementById('recipeGrid');
         grid.innerHTML = '<div class="loading">Mencari resep masakan...</div>';
 
-        // Menggunakan AllOrigins Proxy untuk menghindari blokir CORS
+        // Memakai proxy AllOrigins agar bebas masalah CORS
         const targetUrl = 'https://masak-apa-tommorow.vercel.app/api/search/?q=' + encodeURIComponent(query);
         const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl);
 
         try {
             const response = await fetch(proxyUrl);
-            if (!response.ok) throw new Error('Network response was not ok');
+            if (!response.ok) throw new Error('Network error');
             
             const result = await response.json();
 
@@ -209,8 +215,7 @@
                 grid.innerHTML = '<div class="empty-msg">Resep tidak ditemukan. Coba kata kunci masakan lain.</div>';
             }
         } catch (error) {
-            console.error('Fetch Error:', error);
-            grid.innerHTML = '<div class="empty-msg" style="color:#d9534f;">Gagal mengambil data resep.<br>Silakan periksa jaringan atau coba beberapa saat lagi.</div>';
+            grid.innerHTML = '<div class="empty-msg" style="color:#d9534f;">Gagal mengambil data resep.<br>Periksa koneksi internet Anda.</div>';
         }
     }
 
@@ -232,64 +237,36 @@
         });
     }
 
-    // --- MANAJEMEN RIWAYAT (SUPABASE + LOCALSTORAGE FALLBACK) ---
+    // --- FITUR MANAJEMEN RIWAYAT LOKAL (localStorage) ---
 
-    async function saveHistory(query) {
-        // Fallback ke LocalStorage jika Supabase belum disetup
-        let localHist = JSON.parse(localStorage.getItem('recipeHistory')) || [];
-        localHist = localHist.filter(k => k.toLowerCase() !== query.toLowerCase());
-        localHist.unshift(query);
-        if (localHist.length > 6) localHist.pop();
-        localStorage.setItem('recipeHistory', JSON.stringify(localHist));
+    function saveHistory(query) {
+        let history = JSON.parse(localStorage.getItem('recipeHistoryLocal')) || [];
+        
+        // Hapus duplikat
+        history = history.filter(item => item.toLowerCase() !== query.toLowerCase());
+        
+        // Tambahkan ke urutan paling depan
+        history.unshift(query);
+        
+        // Batasi maksimal 8 riwayat
+        if (history.length > 8) history.pop();
 
-        // Simpan ke Supabase jika terhubung
-        if (supabase) {
-            try {
-                await supabase.from('search_history').insert([{ keyword: query }]);
-            } catch (err) {
-                console.error('Gagal simpan ke Supabase:', err);
-            }
-        }
-
+        localStorage.setItem('recipeHistoryLocal', JSON.stringify(history));
         loadHistory();
     }
 
-    async function loadHistory() {
+    function loadHistory() {
         const historyContainer = document.getElementById('historyTags');
+        const history = JSON.parse(localStorage.getItem('recipeHistoryLocal')) || [];
 
-        // Mengambil dari Supabase jika ada, jika tidak pakai LocalStorage
-        if (supabase) {
-            try {
-                const { data, error } = await supabase
-                    .from('search_history')
-                    .select('keyword')
-                    .order('created_at', { ascending: false })
-                    .limit(6);
-
-                if (!error && data && data.length > 0) {
-                    const uniqueKeywords = [...new Set(data.map(i => i.keyword))];
-                    renderTags(uniqueKeywords);
-                    return;
-                }
-            } catch (err) {
-                console.log('Menggunakan riwayat lokal');
-            }
-        }
-
-        const localHist = JSON.parse(localStorage.getItem('recipeHistory')) || [];
-        renderTags(localHist);
-    }
-
-    function renderTags(keywords) {
-        const historyContainer = document.getElementById('historyTags');
         historyContainer.innerHTML = '';
 
-        if (keywords.length === 0) {
-            historyContainer.innerHTML = '<span style="font-size: 12px; color: #aaa;">Belum ada riwayat pencarian.</span>';
+        if (history.length === 0) {
+            historyContainer.innerHTML = '<span style="font-size: 12px; color: #aaa;">Belum ada riwayat.</span>';
             return;
         }
 
-        keywords.forEach(keyword => {
+        history.forEach(keyword => {
             const tag = document.createElement('span');
             tag.className = 'tag';
             tag.textContent = keyword;
@@ -299,6 +276,11 @@
             };
             historyContainer.appendChild(tag);
         });
+    }
+
+    function clearHistory() {
+        localStorage.removeItem('recipeHistoryLocal');
+        loadHistory();
     }
 </script>
 
