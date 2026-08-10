@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaksi PLN Pascabayar - Sepulsa</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+        }
+        .header {
+            background-color: #0d47a1;
+            color: #ffffff;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .container {
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 0 15px;
+        }
+        .iframe-wrapper {
+            position: relative;
+            width: 100%;
+            height: 750px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Layanan Pembayaran PLN Pascabayar</h1>
+    </div>
+
+    <div class="container">
+        <div class="iframe-wrapper">
+            <iframe 
+                src="https://www.sepulsa.com/transaction/pln?type=postpaid" 
+                title="Transaksi PLN Postpaid Sepulsa"
+                allowfullscreen>
+            </iframe>
+        </div>
+    </div>
+
+</body>
+</html>
